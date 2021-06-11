@@ -1,0 +1,128 @@
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: color
+                operator: In
+                values:
+                - blue
+
+
+
+ontrolplane $ more blue.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2021-01-25T05:11:12Z"
+  generation: 1
+  labels:
+    app: blue
+  managedFields:
+
+    manager: kubectl-create
+    operation: Update
+    time: "2021-01-25T05:11:12Z"
+  - apiVersion: apps/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+           f:updatedReplicas: {}
+    manager: kube-controller-manager
+    operation: Update
+    time: "2021-01-25T05:11:21Z"
+  name: blue
+  namespace: default
+  resourceVersion: "1522"
+  selfLink: /apis/apps/v1/namespaces/default/deployments/blue
+  uid: be66a904-d976-4072-a127-d6599921ff3f
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 6
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: blue
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: blue
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: color
+                operator: In
+                values:
+                - blue
+      containers:
+      - image: nginx
+        imagePullPolicy: Always
+        name: nginx
+
+
+
+
+
+
+  controlplane $ more deploy.yml
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: red
+    name: red
+  spec:
+    replicas: 3
+    selector:
+      matchLabels:
+        app: red
+    strategy: { }
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: red
+      spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: node-role.kubernetes.io/master
+                      operator: Exists
+        containers:
+          - image: nginx
+            name: nginx
+            resources: { }
+  status: { }
+
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-role.kubernetes.io/master
+            operator: Exists
+
+
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: color
+                operator: In
+                values:
+                  - blue

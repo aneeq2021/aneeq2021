@@ -1,0 +1,234 @@
+docker run -v data_volume:/var/lib/mysql mysql --> It will create Volume in /var/lib/docker/volume or add existing volume to mysql container. This is Volume MOUNT
+
+docker run -v /data/mysql:/var/lib/mysql mysql --> This location is outside docker Volumes & /data/mysql could be SAN storage. This is BIND MOUNT
+
+docker run --mount type=bind,source=/data/mysql,target=/var/lib/mysql mysql --> Should be like this
+
+Using PVCs in PODs
+Once you create a PVC use it in a POD definition file by specifying the PVC Claim name under persistentVolumeClaim section in the volumes section like this:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod
+spec:
+  containers:
+    - name: myfrontend
+      image: nginx
+      volumeMounts:
+      - mountPath: "/var/www/html"
+        name: mypd
+  volumes:
+    - name: mypd
+      persistentVolumeClaim:
+        claimName: myclaim
+
+
+The same is true for ReplicaSets or Deployments. Add this to the pod template section of a Deployment on ReplicaSet.
+
+Reference URL: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#claims-as-volumes
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp
+spec:
+  containers:
+    - name: webapp
+      image: kodekloud/event-simulator
+      volumeMounts:
+      - mountPath: "/log"
+        name: mypd
+  volumes:
+    - name: mypd
+      hostPath:
+          path: /var/log/webapp
+ 	  type: Directory
+
+
+kubectl exec webapp -- ls -l /log/
+kubectl exec webapp -- cat  /log/app.log
+
+
+
+WORKING
+HOST PATH
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2021-01-30T07:13:29Z"
+  managedFields:
+  - apiVersion: v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:spec:
+        f:containers:
+
+            f:lastTransitionTime: {}
+            f:status: {}
+            f:type: {}
+          k:{"type":"Ready"}:
+            .: {}
+            f:lastProbeTime: {}
+            f:lastTransitionTime: {}
+            f:status: {}
+            f:type: {}
+        f:containerStatuses: {}
+        f:hostIP: {}
+        f:phase: {}
+        f:podIP: {}
+        f:podIPs:
+          .: {}
+          k:{"ip":"10.244.1.4"}:
+            .: {}
+            f:ip: {}
+        f:startTime: {}
+    manager: kubelet
+    operation: Update
+    time: "2021-01-30T07:13:35Z"
+  name: webapp
+  namespace: default
+  resourceVersion: "652"
+  selfLink: /api/v1/namespaces/default/pods/webapp
+  uid: ccae89d4-584d-4d99-bfcb-625db182cc2e
+spec:
+  containers:
+  - env:
+    - name: LOG_HANDLERS
+      value: file
+    image: kodekloud/event-simulator
+    imagePullPolicy: Always
+    name: event-simulator
+    volumeMounts:
+    - mountPath: /log
+      name: log-volume
+  volumes:
+   - name: log-volume
+     hostPath:
+          path: /var/log/webapp
+
+
+
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-log
+spec:
+  capacity:
+    storage: 100Mi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/pv/log"
+
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: claim-log-1
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Mi
+
+
+PERSISTENT VOLUME CLAIM
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2021-01-30T07:13:29Z"
+  managedFields:
+  - apiVersion: v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:spec:
+        f:containers:
+          k:{"name":"event-simulator"}:
+            .: {}
+            f:env:
+              .: {}
+              k:{"name":"LOG_HANDLERS"}:
+                .: {}
+                f:name: {}
+                f:value: {}
+            f:image: {}
+            f:imagePullPolicy: {}
+            f:name: {}
+            f:resources: {}
+            f:terminationMessagePath: {}
+            f:terminationMessagePolicy: {}
+        f:dnsPolicy: {}
+        f:enableServiceLinks: {}
+
+    operation: Update
+    time: "2021-01-30T07:13:35Z"
+  name: webapp
+  namespace: default
+  resourceVersion: "652"
+  selfLink: /api/v1/namespaces/default/pods/webapp
+  uid: ccae89d4-584d-4d99-bfcb-625db182cc2e
+spec:
+  containers:
+  - env:
+    - name: LOG_HANDLERS
+      value: file
+    image: kodekloud/event-simulator
+    imagePullPolicy: Always
+    name: event-simulator
+    volumeMounts:
+    - mountPath: /log
+      name: log-volume
+  volumes:
+   - name: log-volume
+     persistentVolumeClaim:
+       claimName: claim-log-1
+
+
+
+
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: local-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+  storageClassName: local-storage
+
+
+ASSIGN PVC TO POD AND MOUNT
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx:alpine
+      volumeMounts:
+      - mountPath: "/var/www/html"
+        name: mypd
+  volumes:
+    - name: mypd
+      persistentVolumeClaim:
+        claimName: local-pvc
+
+
+STORAGE CLASS
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: delayed-volume-sc
+provisioner: kubernetes.io/no-provisioner
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer

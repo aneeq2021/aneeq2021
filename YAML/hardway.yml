@@ -1,0 +1,265 @@
+[root@master certs]# more /etc/systemd/system/etcd.service
+[Unit]
+Description=etcd
+Documentation=https://github.com/coreos
+
+[Service]
+ExecStart=/usr/local/bin/etcd \
+  --name master \
+  --cert-file=/etc/etcd/etcd-server.crt \
+  --key-file=/etc/etcd/etcd-server.key \
+  --peer-cert-file=/etc/etcd/etcd-server.crt \
+  --peer-key-file=/etc/etcd/etcd-server.key \
+  --trusted-ca-file=/etc/etcd/ca.crt \
+  --peer-trusted-ca-file=/etc/etcd/ca.crt \
+  --peer-client-cert-auth \
+  --client-cert-auth \
+  --initial-advertise-peer-urls https://192.168.1.186:2380 \
+  --listen-peer-urls https://192.168.1.186:2380 \
+  --listen-client-urls https://192.168.1.186:2379,https://127.0.0.1:2379 \
+  --advertise-client-urls https://192.168.1.186:2379 \
+  --initial-cluster-token etcd-cluster-0 \
+  --initial-cluster master=https://192.168.1.186:2380 \
+  --initial-cluster-state new \
+  --data-dir=/var/lib/etcd
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+[root@master ~]# more /var/lib/kubernetes/encryption-config.yaml
+apiVersion: v1
+kind: EncryptionConfig
+resources:
+  - resources:
+    - secrets
+    providers:
+    - aescbc:
+        keys:
+        - name: key1
+          secret: cks/UBazDfcXZmzVOiv1XvF5ZVrw2Yw0m3rEHSVynE8=
+    - identity: {}
+
+
+
+
+[root@master ~]# more /etc/systemd/system/kube-controller-manager.service
+[Unit]
+Description=Kubernetes Controller Manager
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-controller-manager \
+  --bind-address=0.0.0.0 \
+  --master=127.0.0.1:8080 \
+  --cluster-cidr=192.168.1.0/24 \
+  --cluster-name=kubernetes \
+  --cluster-signing-cert-file=/var/lib/kubernetes/ca.crt \
+  --cluster-signing-key-file=/var/lib/kubernetes/ca.key \
+  --kubeconfig=/var/lib/kubernetes/kube-controller-manager.kubeconfig \
+  --leader-elect=true \
+  --root-ca-file=/var/lib/kubernetes/ca.crt \
+  --service-account-private-key-file=/var/lib/kubernetes/service-account.key \
+  --service-cluster-ip-range=10.96.0.0/24 \
+  --use-service-account-credentials=true \
+  --v=2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+[root@master ~]# more /etc/systemd/system/kube-scheduler.service
+[Unit]
+Description=Kubernetes Scheduler
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-scheduler \
+  --kubeconfig=/var/lib/kubernetes/kube-scheduler.kubeconfig \
+  --address=127.0.0.1 \
+  --master=127.0.0.1:8080 \
+  --leader-elect=true \
+  --v=2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+
+kubectl get componentstatuses --kubeconfig admin.kubeconfig
+
+
+KUBELET
+
+[root@worker01 ~]# more /var/lib/kubelet/kubeconfig
+{
+  kubectl config set-cluster kubernetes-the-hard-way \
+    --certificate-authority=ca.crt \
+    --embed-certs=true \
+    --server=https://192.168.1.186:6443 \
+    --kubeconfig=worker01.kubeconfig
+
+  kubectl config set-credentials system:node:worker01 \
+    --client-certificate=worker01.crt \
+    --client-key=worker01.key \
+    --embed-certs=true \
+    --kubeconfig=worker01.kubeconfig
+
+  kubectl config set-context default \
+    --cluster=kubernetes-the-hard-way \
+    --user=system:node:worker01 \
+    --kubeconfig=worker01.kubeconfig
+
+  kubectl config use-context default --kubeconfig=worker01.kubeconfig
+}
+
+
+
+
+
+[root@worker01 ~]# more /etc/systemd/system/kubelet.service  ------> NOT WORKING KUBELET SERVICE
+[Unit]
+Description=Kubernetes Kubelet
+Documentation=https://github.com/kubernetes/kubernetes
+After=docker.service
+Requires=docker.service
+
+[Service]
+ExecStart=/usr/local/bin/kubelet \
+  --config=/var/lib/kubelet/kubelet-config.yaml \
+  --image-pull-progress-deadline=2m \
+  --cloud-provider=external
+  --kubeconfig=/var/lib/kubelet/kubeconfig
+  --network-plugin=cni \
+  --register-node=true \
+  --v=2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+
+[root@worker01 ~]# more /etc/systemd/system/kubelet.service      ----> WORKING KUBELET SERVICE
+[Unit]
+Description=Kubernetes Kubelet
+Documentation=https://github.com/kubernetes/kubernetes
+After=docker.service
+Requires=docker.service
+
+[Service]
+ExecStart=/usr/local/bin/kubelet \
+  --config=/var/lib/kubelet/kubelet-config.yaml \
+  --image-pull-progress-deadline=2m \
+  --cloud-provider=external \
+  --kubeconfig=/root/worker01.kubeconfig \
+  --network-plugin=cni \
+  --register-node=true \
+  --v=2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+
+[root@worker01 ~]# more /var/lib/kubelet/kubelet-config.yaml
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    enabled: false
+  x509:
+    clientCAFile: "/var/lib/kubernetes/ca.crt"
+authorization:
+  mode: AlwaysAllow
+clusterDomain: "cluster.local"
+clusterDNS:
+  - "10.96.0.10"
+resolvConf: "/run/systemd/resolve/resolv.conf"
+runtimeRequestTimeout: "15m"
+tlsCertFile: "/var/lib/kubelet/worker01.crt"
+tlsPrivateKeyFile: "/var/lib/kubelet/worker01.key"
+
+
+KUBEPROXY
+
+[root@worker01 ~]# more /etc/systemd/system/kube-proxy.service
+[Unit]
+Description=Kubernetes Kube Proxy
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-proxy \
+  --config=/var/lib/kube-proxy/kube-proxy-config.yaml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+
+[root@worker01 ~]# more /var/lib/kube-proxy/kube-proxy-config.yaml
+kind: KubeProxyConfiguration
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+clientConnection:
+  kubeconfig: "/root/worker01.kubeconfig"
+mode: "iptables"
+clusterCIDR: "192.168.1.0/24"
+
+
+[root@worker01 ~]# more /var/lib/kube-proxy/kubeconfig
+{
+ kubectl config set-cluster kubernetes-the-hard-way \
+    --certificate-authority=ca.crt \
+    --embed-certs=true \
+    --server=https://192.168.1.186:6443 \
+    --kubeconfig=kube-proxy.kubeconfig
+
+  kubectl config set-credentials system:kube-proxy \
+    --client-certificate=kube-proxy.crt \
+    --client-key=kube-proxy.key \
+    --embed-certs=true \
+    --kubeconfig=kube-proxy.kubeconfig
+
+  kubectl config set-context default \
+    --cluster=kubernetes-the-hard-way \
+    --user=system:kube-proxy \
+    --kubeconfig=kube-proxy.kubeconfig
+
+  kubectl config use-context default --kubeconfig=kube-proxy.kubeconfig
+}
+
+
+In my case creating file /etc/cni/net.d/10-weave.conflist with following content helped:- ---> NODES NOT READY AFTER WEAVE
+
+{
+"cniVersion": "0.3.0",
+"name": "weave",
+"plugins": [
+{
+"name": "weave",
+"type": "weave-net",
+"hairpinMode": true
+},
+{
+"type": "portmap",
+"capabilities": {"portMappings": true},
+"snat": true
+}
+]
+}
+
+[root@worker01 ~]# ln -s /run/resolvconf/ /run/systemd/resolve
+

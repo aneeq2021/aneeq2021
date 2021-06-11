@@ -1,0 +1,669 @@
+https://levelup.gitconnected.com/kubernetes-cka-example-questions-practical-challenge-86318d85b4d --> Practice Exam
+https://itnext.io/cks-exam-series-4-crash-that-apiserver-5f4d3d503028 --> Practice Exam
+https://www.kubernative.net/en/17-tutorial/69-exam-experience-cka --> Mock Test
+https://github.com/stretchcloud/cka-lab-practice --> Practice Test
+
+https://github.com/mmumshad/kubernetes-the-hard-way
+https://www.youtube.com/watch?v=uUupRagM7m0&list=PL2We04F3Y_41jYdadX55fdJplDvgNGENo --> Hard way
+
+https://speakerdeck.com/thockin/illustrated-guide-to-kubernetes-networking --> K8s Networking
+
+https://github.com/alexellis/k3sup
+
+https://swagger.io/tools/swagger-ui/ --> Swagger UI for API
+
+https://book.kubebuilder.io/cronjob-tutorial/empty-main.html --> API Documentation
+
+
+https://www.katacoda.com/courses/kubernetes/playground --> Playground
+
+https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#delete-deployment-v1-apps --> API Documentation
+https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#-strong-status-operations-pod-v1-core-strong- --> API Documentation
+
+https://www.youtube.com/channel/UCdngmbVKX1Tgre699-XLlUA --> Youtube
+
+https://unofficial-kubernetes.readthedocs.io/en/latest/tasks/configure-pod-container/configmap/ --> Documenation
+
+https://cloud.google.com/kubernetes-engine/docs/concepts/configmap --> Google Documentation
+
+https://phoenixnap.com/kb/prometheus-kubernetes-monitoring --> Prometheus & Grafana dashboard Monitoring
+
+https://play.grafana.org/d/000000012/grafana-play-home?orgId=1 --> Play Graphana 
+
+
+Kubernetes is orchestrator for Microservices apps, that run on containers.
+
+Windows is only supported as a worker node in the Kubernetes architecture and component matrix. This means that a Kubernetes cluster must always include Linux master nodes, zero or more Linux worker nodes, and zero or more Windows worker nodes.
+
+Windows has strict compatibility rules, where the host OS version must match the container base image OS version. Only Windows containers with a container operating system of Windows Server 2019 are supported
+
+etcd is an open source distributed key-value store used to hold and manage the critical information that distributed systems need to keep running. Most notably, it manages the configuration data, state data, and metadata for Kubernetes, the popular container orchestration platform.
+
+etcd is a consistent and highly-available key value store used as Kubernetes' backing store for all cluster data. If your Kubernetes cluster uses etcd as its backing store, make sure you have a back up plan for those data. You can find in-depth information about etcd in the official documentation
+
+MASTER 
+Api Server	--> kube-apiserver,Front-end to the control plane, REST API, Use JSON (manifest files) -> we only deal with master/apiserver. use 	443 port
+Conroller	-->Node, Endpoints, Namespace controller. Maintain desired state of cluster
+Cluster Store --> etcd (no SQL DB), cluster state & config, make sure backup it. Only Apiserver talks to ETCD database.
+Scheduler	--> Watch apiserver for new pods, assign work to nodes affinity/anti affinity,contraints, resources
+
+NODES
+Kubelet --> Main Kubernetes agent, Register node with cluster, watches APIServer, instantiates pods,Reports back to master,Port:10255
+			Port:10255/spec information about node 
+			Port:10255/healthz health check endpoint 
+			Port:10255/pods shows running pods
+			if kubelet fails, its report state to master and master control plane decides what to do.
+Container runtime --> Container management, pulling images,start/stop containers, 
+					  Usually Docker or Rocket
+Kube-Proxy	--> Networking, 1 IP/Pod, all containers in a POD share share single IP
+				loadbalance across all pods in a service
+
+PODS
+	Contain Containers. Can have multiple containers. NODE contains PODS contains container
+	All containers share same POD environment, same volumes,same IP. container can talk to eachother via localhost interface. 
+	Scaling recommends using multiple pods rather using same pods with multiple containers.
+	Can use YAML file to deploy PODS send to APIServer OR using replication controller if POD fails replication controller creates new POD to reach desired state.
+	Every new POD gets a new IP, if POD fails newly generated POD will get a new IP not the old one.
+	
+	deployments ?
+
+Services
+	Every new POD gets a new IP, if POD fails newly generated POD will get a new IP not the old one.
+	Service Updates itself with new POD and new POD IP to keep loadbalancing.
+	PODS belong to a service via LABEL.
+	Service only send traffic to healthy PODS & can configure session affinity (sticky session)
+	can forward traffic or point to things outside cluster
+	can use random loadbalancing, round robin also supported. 
+	Uses TCP by default, UDP also supported.
+	
+	Session affinity always directs traffic from a client to the same pod. It is typically used as an optimization to ensure that the same pod receives traffic from the same user so that you can leverage session caching.
+	
+DEPLOYMENTS
+	Declarative statements send to APIServer to make deployements.
+	Deploy visa YAML or JSON manifest.
+	
+INSTALLATION
+	Minikube --> To install on laptop just like docker for windows & docker for MAC. Single node cluster.
+	Kubectl	 --> From a user's point of view, kubectl is your cockpit to control Kubernetes. It allows you to perform every possible Kubernetes operation. From a technical point of view, kubectl is a client for the Kubernetes API. The Kubernetes API is an HTTP REST API. This API is the real Kubernetes user interface
+			
+		kubectl config current-context --> should display minikube on laptop local deployments. Switch context to connect any k8s cluster.
+		kubectl get nodes 			--> list cluster nodes
+		minikube stop
+		minikube delete
+		minikube start --vm-driver=xhyve --kubernetes-version="v1.6.0" --> to install specific version
+		
+		
+		kubectl get namespaces
+
+NAME          STATUS    AGE
+default       Active    11d
+kube-system   Active    11d
+kube-public   Active    11d
+
+Kubernetes starts with three initial namespaces:
+
+    default 		The default namespace for objects with no other namespace
+    kube-system 	The namespace for objects created by the Kubernetes system
+    kube-public 	This namespace is created automatically and is readable by all users (including those not authenticated). This namespace is mostly reserved for cluster usage, in case that some resources should be visible and readable publicly throughout the whole cluster. The public aspect of this namespace is only a convention, not a requirement.
+
+You can also get the summary of a specific namespace using:
+
+kubectl get namespaces <name>
+
+	Installing k8s on AWS 
+			Pre Requisites --> kubectl, kops, AWS CLI, IAM Account with EC2FullAccess,Route53FullAccess,S3FullAccess,IAMFullAccess,AmazonVPCFullAccess.
+							   DNS Domain register for Internet.
+	Manual Install 
+			Pre Requisites --> Docker or rkt, kubelet, kubeadm (to build cluster), kubectl, CNI (Container networking interface)
+
+WORKING WITH PODS
+		kubectl create -f pod.yml 			--> deploy pod
+		kubectl get pods/hello-pod 			--> using pod name "hello-pod"
+		kubectl describe pods 				--> detailed information
+		kubectl get pods --all-namespaces 	--> all pods in all namespaces
+		kubectl delete pods hello-pod
+		kubectl apply -f abc.yml			--> Create replication controller
+		kubectl get rc 						--> list replication controllers
+		kubectl get rc -o wide				--> Show nodes and pods detailed		
+		kubectl describe rc 
+
+Services
+		kubectl expose rc hello-rc --name=hello-svc --target-port=8080 --type=NodePort --> expose rc service on port 8080
+		kubectl describe svc hello-svc
+		kubectl describe services service-test
+	Service Type
+		ClusterIP	--> Access within Cluster
+		NodePort  	--> Expose the app outside of cluster by adding cluster-wide port on top of clusterIP
+		LoadBalancer --> Integrates NodePort with Cloud-based load balancers
+		
+		kubectl create -f svc.yml			-->Create Service 
+		kubectl get svc
+		kubectl describe svc hello-svc
+		
+		kubectl get ep --> get endpoints, POD IPs
+		kubectl describe ep hello-svc --> to view POD IPs
+
+Deployments
+		Create replica sets or replication controllers, which contain PODS
+		For Updating and rollback --> makes easy upgrade, rollback
+		kubectl get rs --> Get replica sets
+		
+		kubectl apply -f deploy.yml --record --> will show in history command
+		kubectl delete -f deploy.yml 
+		kubectl rollout status deployment hello-deploy
+		kubectl get deploy hello-deploy
+		kubectl rollout history deployment hello-deploy
+		kubectl describe deploy hello-deploy
+		kubectl rollout undo deployment hello-deploy --to-revision=1
+		
+	Deployment Process-->	Create app manifest file --> Create image --> upload to registry --> define in k8s manifest --> APIServer
+		
+#######################################################################################################################
+Linux Foundation
+
+The user ID is LFtraining and the password is Penguin2014.
+	
+Built on open source and easily extensible, Kubernetes is definitely a solution to manage containerized applications. There are other solutions as well. 
+
+	Docker Swarm
+	Apache Mesos
+	Nomad
+	Rancher	
+
+
+https://stackoverflow.com/search?q=kubernetes&s=a394109a-c772-490f-a4a1-6df0c4eb9a76 --> Community help
+
+https://github.com/kubernetes/kubernetes/issues --> GitHub K8s Issues help
+
+
+Which of the following are part of a Pod?
+
+A. One or more containers
+B. Shared IP address
+C. One namespace
+D. All of the above
+
+Orchestration is managed through a series of watch-loops or controllers. Each interrogates the ___________________ for a particular object state.
+
+A. kube-apiserver
+B. etcd
+C. kubelet
+D. ntpd
+
+
+Kubernetes imposes the following fundamental requirements on any networking implementation (barring any intentional network segmentation policies):
+
+pods on a node can communicate with all pods on all nodes without NAT
+agents on a node (e.g. system daemons, kubelet) can communicate with all pods on that node
+Note: For those platforms that support Pods running in the host network (e.g. Linux):
+
+pods in the host network of a node can communicate with all pods on all nodes without NAT
+		
+
+After Installing POD network status of all
+kubectl get pods --all-namespaces -o wide
+kubectl get pods --all-namespaces	
+kubectl get nodes --all-namespaces -o wide
+kubectl get namespace
+
+Upgrade Kubeadm Cluster
+https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/
+
+POD NETWORK
+https://medium.com/google-cloud/understanding-kubernetes-networking-pods-7117dd28727#:~:text=A%20pod%20consists%20of%20one,kubernetes%20applications%20are%20built%20from. ***IMPORTANT
+
+kubectl get pods --selector=app=service_test_pod -o jsonpath='{.items[*].status.podIP}' --> Get POD IPs
+
+
+	
+https://medium.com/kubernetes-tutorials/making-sense-of-taints-and-tolerations-in-kubernetes-446e75010f4e --> Taints & Tolerations
+
+kubectl describe node kubemaster | grep Taint --> Check if Master node will be scheduling any PODS or not 
+
+In general, the following rules apply for the NoExecute effect:
+Pods with no tolerations for the taint(s) are evicted immediately.
+Pods with the toleration for the taint but that do not specify tolerationSeconds in their toleration stay bound to the node forever.
+Pods that tolerate the taint with a specified tolerationSeconds remain bound for the specified amount of time.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##############################################################################################################################################
+Delete PODS inside deployments ? what will happen to deployment ??
+
+
+Problem and Solutions
+
+PROBLEM 1
+
+Workernode2 ~]$ kubectl get nodes
+The connection to the server localhost:8080 was refused - did you specify the right host or port?
+
+cp -i /etc/kubernetes/kubelet.conf $HOME/.kube/config OR ln -s  /etc/kubernetes/kubelet.conf config
+
+
+PROBLEM 2
+
+Control plane node isolation
+By default, your cluster will not schedule pods on the control-plane node for security reasons. If you want to be able to schedule pods on the control-plane node, e.g. for a single-machine Kubernetes cluster for development, run:
+
+kubectl taint nodes --all node-role.kubernetes.io/master-
+With output looking something like:
+
+node "test-01" untainted
+taint "node-role.kubernetes.io/master:" not found
+taint "node-role.kubernetes.io/master:" not found
+This will remove the node-role.kubernetes.io/master taint from any nodes that have it, including the control-plane node, meaning that the scheduler will then be able to schedule pods everywhere.
+
+So... one quick kubectl taint nodes --all node-role.kubernetes.io/master- command later, and my single-node K8s cluster was now actually useful for running pods!
+
+PROBLEM 3
+
+Get Containers running in a POD & Images used to run the Pod
+
+kubectl get pods -o=custom-columns=NAME:.metadata.name,CONTAINERS:.spec.containers[*].name
+kubectl get pods --all-namespaces -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' |\
+sort
+
+PROBLEM 4
+
+node1 ~]$ kubectl get pods --all-namespaces -o wide
+
+kube-system   etcd-node1                      1/1     Running   0          3h18m   192.168.0.23   node1   <none>           <none>
+kube-system   kube-apiserver-node1            1/1     Running   0          3h18m   192.168.0.23   node1   <none>           <none>
+
+node1 ~]$ kubectl -n kube-system exec -it etcd-node1 -- sh 
+
+
+##############################################################################################################################################
+Knowledge
+
+Namespaces --> used to group similar resources or isolate resources of clusters. Good practice to create NS & Group Resources in namespaces.
+			   can have multiple NS, different for DB, Elastic Search, Monitoring etc.
+			   Can have multiple teams or applications, create different namespaces, otherwise different teams would overwrite the existing deployment.
+			   Can have multiple environments, staging or production.
+			   Can have blue/green deployment environment.
+			   Can limit resources with different namespaces. Resource Quota
+			   Can share services with different environments. But, Each Namespace should have their own ConfigMap & Secrets.
+			   Services in different NS are accessible from different Namespaces. For e.g; mysql-service.database (database is NS).
+			   Volumes & Nodes are global cant be namespaced. 
+			   Get resources which cant be namespaced --> kubectl api-resources --namespaced=false
+			   Get resources which can be namespaced --> kubectl api-resources --namespaced=true
+			   Can use KUBENS to make default NS in settings instead of typing "-n namespace" everytime in every command.
+			   
+			   
+			   
+			   
+Step 2: Get Discovery Token CA cert Hash
+				openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+				
+
+##############################################################################################################################################			
+			   
+HANDS ON
+
+Pods
+Q1) Create 2 container in single Pod?
+Q2) DEPLOY EVENT SIMULATOR FOR YOUR OWN TESTING & LEARNING ?
+Q3) Get IP/Gateway of running container using kubectl command
+Q4) Change Context ?
+Q5) INIT CONTAINERS
+
+1) Update the pod-definition file and use 'kubectl apply' command or use 'kubectl edit pod redis' command.
+2) Kubectl run nginx --image=nginx --> create nginx pod with nginx image
+3)kubectl get pods -o wide --> check PODS running on which node
+4)kubectl get pod web-app --> check how many containers running in a Pod
+5)kubectl run redis --image=redis --dry-run=client -o yaml > pod.yaml 
+6) kubectl get pod webapp-color -o yaml > pod.yml
+7) kubectl explain pods --recursive | grep -i env -A5
+
+
+Replica Sets
+
+1) Kubectl create -f replicaset-definition.yml
+2) KUbectl get replicaset
+3) kubectl delete replicaset myapp-replicaset
+4) kubectl replace -f replicaset-definition.yml
+5) kubectl scale --replicas=6 -f replicaset-definition.yml
+6) kubectl scale --replicas=5 replicaset new-replica-set
+
+EXAM TIPS
+
+As you might have seen already, it is a bit difficult to create and edit YAML files. Especially in the CLI. During the exam, you might find it difficult to copy and paste YAML files from browser to terminal. Using the kubectl run command can help in generating a YAML template. And sometimes, you can even get away with just the kubectl run command without having to create a YAML file at all. For example, if you were asked to create a pod or deployment with specific name and image you can simply run the kubectl run command.
+
+Use the below set of commands and try the previous practice tests again, but this time try to use the below commands instead of YAML files. Try to use these as much as you can going forward in all exercises
+
+Reference (Bookmark this page for exam. It will be very handy):
+https://kubernetes.io/docs/reference/kubectl/conventions/
+
+Create an NGINX Pod
+kubectl run nginx --image=nginx
+
+Generate POD Manifest YAML file (-o yaml). Don't create it(--dry-run)
+kubectl run nginx --image=nginx --dry-run=client -o yaml
+
+Create a deployment
+kubectl create deployment --image=nginx nginx
+
+Generate Deployment YAML file (-o yaml). Don't create it(--dry-run)
+kubectl create deployment --image=nginx nginx --dry-run=client -o yaml
+
+Generate Deployment YAML file (-o yaml). Don't create it(--dry-run) with 4 Replicas (--replicas=4)
+kubectl create deployment --image=nginx nginx --dry-run=client -o yaml > nginx-deployment.yaml
+
+
+Deployments
+
+1) Kubectl create deployment httpd-frontend --image=httpd-frontend
+2) kubectl scale deployment --replicas=3 httpd-frontend
+
+Namespaces
+
+1) Kubectl create namespace dev
+2) kubectl get pods --namespace=dev
+3) kubectl config set-context $(kubectl config current-context) --namespace=dev
+4) kubectl get pods --namespace=research
+5) kubectl run redis --image=redis --namespace=finance
+	kubectl run redis --image=redis --dry-run=client -o yaml > pod.yaml
+	add value "namespace: finance" under metadata
+6) kubectl get pods --all-namespaces
+7) kubectl get ns/namespace
+8) kubectl get ns --no-headers | wc -l
+9) kubectl -n research get pods 
+10)kubectl -n dev get svc
+
+Services
+
+1) Node Port (service listens on node port) and forward traffic to Pod
+2) ClusterIP (create a Virtual IP to listen requests and forward traffic to POD)
+3) LoadBalancing 
+4) kubectl expose deploy simple-webapp-deployment --name=webapp-service --target-port=8080 --type=NodePort --port=8080 --dry-run=client -o yaml > svc.yaml
+
+Imperative Commands
+
+1) kubectl run --image=nginx nginx
+2) kubectl create deployment --image=nginx nginx
+3) kubectl expose deployment nginx --port 80
+4) kubectl edit deployment nginx
+5) kubectl scale deployment nginx --replicas=5
+6) kubectl set image deploy nginx nginx=nginx:1.18
+7) kubectl run redis --image=redis:alpine --labels=tier=db
+8) kubectl expose pod redis --name redis-service --port 6379 --target-port 6379
+   kubectl expose pod redis --name=redis-service --port=6379 
+9) kubectl run custom-nginx --image=nginx --port 8080 --> create pod and expose port
+10) kubectl run httpd --image=httpd-alpine --port 80 --expose --dry-run=client -o yaml
+     kubectl run httpd --image=httpd:alpine --port=80 --expose 
+	 (Create a pod called httpd using the image httpd:alpine create a service of type ClusterIP by the same name (httpd). The target port for the service should be 80.
+
+Try to do this with as few steps as possible.)
+11) kubectl create deployment webapp --image=kodekloud/webapp-color --replicas=3
+
+kubectl run redis --image=redis:alpine --dry-run=client -o yaml > redis.yml
+
+
+POD
+
+Create an NGINX Pod
+kubectl run nginx --image=nginx
+
+Generate POD Manifest YAML file (-o yaml). Don't create it(--dry-run)
+kubectl run nginx --image=nginx  --dry-run=client -o yaml
+
+
+Deployment
+
+Create a deployment
+kubectl create deployment --image=nginx nginx
+
+Generate Deployment YAML file (-o yaml). Don't create it(--dry-run)
+kubectl create deployment --image=nginx nginx --dry-run -o yaml
+
+Generate Deployment with 4 Replicas
+kubectl create deployment nginx --image=nginx --replicas=4
+
+You can also scale a deployment using the kubectl scale command.
+kubectl scale deployment nginx --replicas=4
+
+Another way to do this is to save the YAML definition to a file.
+kubectl create deployment nginx --image=nginx--dry-run=client -o yaml > nginx-deployment.yaml
+
+You can then update the YAML file with the replicas or any other field before creating the deployment.
+
+Service
+
+
+Create a Service named redis-service of type ClusterIP to expose pod redis on port 
+kubectl expose pod redis --port=6379 --name redis-service --dry-run=client -o yaml
+(This will automatically use the pod's labels as selectors)
+
+Or
+
+kubectl create service clusterip redis --tcp=6379:6379 --dry-run=client -o yaml  (This will not use the pods labels as selectors, instead it will assume selectors as app=redis. You cannot pass in selectors as an option. So it does not work very well if your pod has a different label set. So generate the file and modify the selectors before creating the service)
+
+
+Create a Service named nginx of type NodePort to expose pod nginx's port 80 on port 30080 on the nodes:
+kubectl expose pod nginx --port=80 --name nginx-service --type=NodePort --dry-run=client -o yaml
+(This will automatically use the pod's labels as selectors, but you cannot specify the node port. You have to generate a definition file and then add the node port in manually before creating the service with the pod.)
+
+Or
+
+kubectl create service nodeport nginx --tcp=80:80 --node-port=30080 --dry-run=client -o yaml
+(This will not use the pods labels as selectors)
+Both the above commands have their own challenges. While one of it cannot accept a selector the other cannot accept a node port. I would recommend going with the `kubectl expose` command. If you need to specify a node port, generate a definition file using the same command and manually input the nodeport before creating the service.
+
+
+Scheduling
+
+Manual Scheduling
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  nodeName: controlplane ------> Add nodeName under Spec
+  containers:
+  - image: nginx
+    name: nginx
+
+Labels & Selectors
+
+1) kubectl get pods --show-labels
+2) kubectl get pods --show-labels | grep -i dev | wc -l
+3) kubectl get rs --show-labels | grep -i prod
+4) kubectl get all -l env=prod 
+5) kubectl get pods -l env=prod,bu=finance,tier=frontend
+
+
+Taints and Tolerations
+
+
+Taints applied to NODE, and Tolerations to POD. So that POD can tolerate the taints on Node and get scheduled/running.
+
+Taints & Tolerations manage which POD to be scheduled on Specific TAINTED node. But doesnt guarantee that POD will be scheduled on that specific node. 
+Because PODS can be scheduled on another node which doesnt have any T&T. 
+In Conclusion TAINTED node will accept the POD with tolerations. If you have HARDCORE requirement to schedule POD to specific node only, there configure NODE AFFINITY.
+
+Kubernetes cluster TAINTS MasterNode by default to not accept any PODS/WORKLOAD. Unless you change the behaviour to accept.
+ kubectl describe node controlplane | grep -i taint
+ 
+
+1) kubectl taint nodes node01 key=value:taint-effect
+2) kubectl taint nodes node01 app=blue:NoSchedule   kubectl taint nodes node01 spray=mortein:NoSchedule
+3) Add toleration to POD yaml file 
+		tolerations: 
+		- key: "app"
+		  operator: "Equal"
+		  value: "blue"
+		  effect: "NoSchedule"
+4) kubectl describe node controlplane | grep -i taint
+5) kubectl run bee --image=nginx --dry-run=client -o yaml > pod.yml
+6) kubectl taint node controlplane node-role.kubernetes.io/master:NoSchedule- --> Remove TAINT
+7) kubectl explain pod --recursive | grep -A5 tolera --> view fields which can be added to POD.yml
+
+
+NODE Selectors
+
+1) kubectl label nodes node01 key=value --> kubectl label nodes node01 size=Large
+2) ADD in pod.yml
+	nodeSelector:
+	 size: Large
+
+Node Affinity and Anti Affinity
+
+1) kubectl label node node01 color=blue
+2) kubectl get deployments.apps blue -o yaml > blue.yml
+     
+https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes-using-node-affinity/
+
+RESOURCES AND LIMITS
+
+https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/cpu-default-namespace/
+https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/
+https://kubernetes.io/docs/tasks/configure-pod-container/assign-memory-resource/
+https://kubernetes.io/docs/tasks/configure-pod-container/assign-cpu-resource/
+
+
+A quick note on editing PODs and Deployments
+
+Edit a POD
+Remember, you CANNOT edit specifications of an existing POD other than the below.
+
+spec.containers[*].image
+spec.initContainers[*].image
+spec.activeDeadlineSeconds
+spec.tolerations
+
+For example you cannot edit the environment variables, service accounts, resource limits (all of which we will discuss later) of a running pod. But if you really want to, you have 2 options:
+
+1. Run the kubectl edit pod <pod name> command.  This will open the pod specification in an editor (vi editor). Then edit the required properties. When you try to save it, you will be denied. This is because you are attempting to edit a field on the pod that is not editable.
+
+
+A copy of the file with your changes is saved in a temporary location as shown above.
+You can then delete the existing pod by running the command:
+
+kubectl delete pod webapp
+
+Then create a new pod with your changes using the temporary file
+kubectl create -f /tmp/kubectl-edit-ccvrq.yaml
+
+
+2. The second option is to extract the pod definition in YAML format to a file using the command
+
+kubectl get pod webapp -o yaml > my-new-pod.yaml
+Then make the changes to the exported file using an editor (vi editor). Save the changes
+
+vi my-new-pod.yaml
+Then delete the existing pod
+kubectl delete pod webapp
+Then create a new pod with the edited file
+kubectl create -f my-new-pod.yaml
+
+
+Edit Deployments
+With Deployments you can easily edit any field/property of the POD template. Since the pod template is a child of the deployment specification,  with every change the deployment will automatically delete and create a new pod with the new changes. So if you are asked to edit a property of a POD part of a deployment you may do that simply by running the command
+
+kubectl edit deployment my-deployment
+
+
+
+DAEMON Sets
+
+1) kubectl get ds --all-namespaces
+2) https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/ --> fluentd daemon sets
+
+
+STATIC Pods
+
+1) /etc/kubernetes/manifests --> place pod.yml file, only PODS can be created this way. No services,deployments.
+2) kubelet.service --> add this property " --pod-manifest-path=/etc/kubernetes/manifests \\"
+    Or
+3) kubelet.service --> add this property " --config=kubeconfig.yaml \\"  --> in kubeconfig.yaml add "staticPodPath: /etc/kubernetes/manifest"
+4) kubectl command can list the STATIC PODS, but cant delete it can be deleted only after deleting manifest files from /etc/kubernetes/manifest
+5) ps -ef | kubelet | grep "\--config" 
+		and search for config file which contains the location of static POD /var/lib/kubelet/config.yaml
+6) kubectl run staticpod --image=busybox --command sleep 1000 --dry-run -o yaml > static.yml
+
+
+KUBE Scheduler
+
+https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/
+
+
+Logging & Monitoring
+
+1) Deploy event-simulator-pod
+2) kubectl logs -f event-simulator-pod "CONTAINER NAME" --> Mention POD name if you have multiple containers
+3) kubectl logs -f webapp -c web-app-01
+
+
+APPLICATION LIFE CYCLE
+
+1) kubectl rollout status deployment/myapp
+2) kubectl rollout history deployment/myapp
+3) kubectl apply f deployment definition.yml
+4) kubectl set image deployment/frontend simple-webapp=kodekloud/webapp-color:v2 --> simple-webapp is container
+5) kubectl rollout undo deployment/myapp
+6) kubectl create f deployment definition.yml
+7) kubectl get deployments
+8) kubectl apply f deployment definition.yml
+9) kubectl set image deployment/frontend simple-webapp=kodekloud/webapp-color:v2 --> simple-webapp is container
+10) kubectl rollout status deployment/myapp
+11) kubectl rollout history deployment/myapp
+12) kubectl rollout undo deployment/myapp
+13) kubectl edit deployment frontend 
+
+for i in {1..35}; do
+   kubectl exec --namespace=kube-public curl -- sh -c 'test=`wget -qO- -T 2  http://webapp-service.default.svc.cluster.local:8080/info 2>&1` && echo "$test OK" || echo "F
+ailed"';
+   echo ""
+done
+
+
+Config Map & Secrets
+
+https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+
+
+
+INIT Containers
+
+https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+
+
+
+CLUSTER MAINTAINANCE
+
+1) kubectl drain node01 --ignore-daemonsets
+2) kubectl drain node01 		--> All Pods will be moved to other nodes
+3) kubectl cordon node03		--> Existing PODS will keep running, no new PODS will be scheduled.
+4) kubectl uncordon node03
+5) kubectl drain node02 --ignore-daemonsets --force --> use Force option bc there are pods scheduled on node2 which are not part of ReplicaSet, daemonsets so those PODS will be lost forever
+
+
+kubeadm token create --print-join-command
+
+
+	
+
+	
+		
+		

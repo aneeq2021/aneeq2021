@@ -1,0 +1,356 @@
+netstat -natulp | grep kube-scheduler
+
+ps -aux | grep kubelet
+
+ls -l /etc/cni/net.d --> check which CNI plugin is currently being used by k8s cluster or get pods -A command
+
+cat /etc/cni/net.d/10-weave.conflist --> see type --> exec binary file to be run by kubelet after a container & its associated namespaces are created
+
+https://www.weave.works/docs/net/latest/kubernetes/kube-addon/
+
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+
+kubectl logs weave-net-n7lpd weave -n kube-system --> check weave net ip allocation range, these IP range will be allocated to PODS.
+
+more kube-apiserver.yaml | grep -i service
+    - --service-account-key-file=/etc/kubernetes/pki/sa.pub
+    - --service-cluster-ip-range=10.96.0.0/12 --> New Services will get IPs from this range
+
+
+kubectl -n kube-system logs kube-proxy-ls54r
+W0203 10:45:55.264283       1 server_others.go:579] Unknown proxy mode "", assuming iptables proxy --> Check which Proxy Type being used by kube-proxy
+
+
+kubectl get ds -n kube-system --> check if kube-proxy is a daemon set
+
+kubectl describe deployments.apps coredns -n kube-system --> find conf file used
+
+
+controlplane $ more web.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2021-02-04T03:27:39Z"
+  generation: 1
+  labels:
+    name: webapp
+  managedFields:
+  - apiVersion: apps/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:labels:
+          .: {}
+          f:name: {}
+      f:spec:
+            f:observedGeneration: {}
+        f:readyReplicas: {}
+        f:replicas: {}
+        f:updatedReplicas: {}
+    manager: kube-controller-manager
+    operation: Update
+    time: "2021-02-04T03:27:47Z"
+  name: webapp
+  namespace: default
+  resourceVersion: "3105"
+  selfLink: /apis/apps/v1/namespaces/default/deployments/webapp
+  uid: dc6cd553-207d-4f78-996e-3c97214f18a6
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      name: webapp
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        name: webapp
+    spec:
+      containers:
+      - env:
+        - name: DB_Host
+          value: mysql.payroll ---------------------> payroll is namespace
+        - name: DB_User
+          value: root
+        - name: DB_Password
+          value: paswrd
+        image: mmumshad/simple-webapp-mysql
+        imagePullPolicy: Always
+        name: simple-webapp-mysql
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  availableReplicas: 1
+  conditions:
+  - lastTransitionTime: "2021-02-04T03:27:47Z"
+    lastUpdateTime: "2021-02-04T03:27:47Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2021-02-04T03:27:39Z"
+    lastUpdateTime: "2021-02-04T03:27:47Z"
+    message: ReplicaSet "webapp-84ffb6ddff" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 1
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1
+
+
+kubectl exec hr -- nslookup mysql.payroll --> checking HR pod to resolve mysql in payroll namespace
+
+
+INGRESS
+
+https://kubernetes.io/docs/concepts/services-networking/ingress/
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: test-ingress
+  namespace: critical-space
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /pay
+        backend:
+          serviceName: pay-service
+          servicePort: 8282
+
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+
+  name: ingress-pay
+  namespace: critical-space
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          serviceName: pay-service
+          servicePort: 8282
+        path: /pay
+        pathType: ImplementationSpecific
+status:
+  loadBalancer:
+    ingress:
+
+
+
+
+controlplane $ more /var/answers/ingress-controller-answer-file.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-controller
+  namespace: ingress-space
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: nginx-ingress
+  template:
+    metadata:
+      labels:
+        name: nginx-ingress
+    spec:
+      serviceAccountName: ingress-serviceaccount
+      containers:
+        - name: nginx-ingress-controller
+          image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.21.0
+          args:
+            - /nginx-ingress-controller
+            - --configmap=$(POD_NAMESPACE)/nginx-configuration
+            - --default-backend-service=app-space/default-http-backend
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - name: http
+              containerPort: 80
+            - name: https
+              containerPort: 443
+
+
+
+
+INGRESS CONTROLLER
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  generation: 3
+  name: ingress-pay
+  namespace: critical-space
+
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          serviceName: pay-service
+          servicePort: 8282
+        path: /pay
+        pathType: ImplementationSpecific
+status:
+  loadBalancer:
+    ingress:
+    - {}
+
+
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ingress-wear-watch
+  namespace: app-space
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /wear
+        backend:
+          serviceName: wear-service
+          servicePort: 8080
+      - path: /watch
+        backend:
+          serviceName: video-service
+          servicePort: 8080
+
+
+
+
+
+  EXAM IMPORTANT
+
+  CREATE DEPLOYMENT
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-controller
+  namespace: ingress-space
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: nginx-ingress
+  template:
+    metadata:
+      labels:
+        name: nginx-ingress
+    spec:
+      serviceAccountName: ingress-serviceaccount
+      containers:
+        - name: nginx-ingress-controller
+          image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.21.0
+          args:
+            - /nginx-ingress-controller
+            - --configmap=$(POD_NAMESPACE)/nginx-configuration
+            - --default-backend-service=app-space/default-http-backend
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - name: http
+              containerPort: 80
+            - name: https
+              containerPort: 443
+
+CREATE SERVICE
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress
+  namespace: ingress-space
+spec:
+  type: NodePort
+  selector:
+    name: nginx-ingress
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
+      name: http
+    - port: 443
+      targetPort: 443
+      name: https
+
+CREATE INGRESS CONTROLLER
+
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minimal-ingress
+  namespace: app-space
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /wear
+        pathType: Prefix
+        backend:
+          service:
+            name: wear-service
+            port:
+              number: 8080
+      - path: /watch
+        pathType: Prefix
+        backend:
+          service:
+            name: video-service
+            port:
+              number: 8080

@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ubuntu-sleeper-2
+spec:
+  containers:
+  - name: ubuntu
+    image: ubuntu
+    command:
+    - "sleep"
+    - "5000"
+
+
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: ubuntu-sleeper-2
+  spec:
+    containers:
+      - name: ubuntu
+        image: ubuntu
+        command: [ "sleep", "5000"]
+
+
+controlplane $ more Dockerfile
+FROM python:3.6-alpine
+
+RUN pip install flask
+COPY . /opt/
+EXPOSE 8080
+WORKDIR /opt
+ENTRYPOINT ["python", "app.py"]
+
+
+
+controlplane $ more pod.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp-green
+spec:
+  containers:
+  - name: ubuntu
+    image: kodekloud/webapp-color
+    args: ["--color=green"]
+
+

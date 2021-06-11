@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: bee
+  name: bee
+spec:
+  containers:
+  - image: nginx
+    name: bee
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  tolerations:
+    - key: "spray"
+      operator: "Equal"
+      value: "mortein"
+      effect: "NoSchedule"
+status: {}
+
+kubectl taint nodes node01 spray=mortein:NoSchedule --> ADD TAINT
+kubectl taint nodes controlplane node-role.kubernetes.io/master:NoSchedule- --> REMOVE TAINT
+
+tolerations:
+  - key: "spray"
+    operator: "Equal"
+    value: "mortein"
+    effect: "NoSchedule"

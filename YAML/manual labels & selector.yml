@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: replicaset-1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: nginx -----> Should be frontend
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+
+
+kubectl get pods --selector env=dev
+kubectl get pods --show-labels
+kubectl get all -l env=prod
+kubectl get pods -l env=prod,bu=finance,tier=frontend

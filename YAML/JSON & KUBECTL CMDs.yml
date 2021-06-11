@@ -1,0 +1,32 @@
+kubectl get nodes -o json
+kubectl get pods -o json
+
+kubectl get nodes -o=jsonpath='{.items[0].spec.containers[0].image}'
+
+kubectl get nodes -o=jsonpath='{.items[*].metadata.name}'
+
+kubectl get nodes -o=jsonpath='{.items[*].status.nodeInfo.architecture}'
+
+kubectl get nodes -o=jsonpath='{.items[*].status.capacity.cpu}'
+
+kubectl get nodes -o=jsonpath='{.items[*].metadata.name} {.items[*].status.capacity.cpu}'
+
+kubectl get nodes -o=jsonpath='{.items[*].metadata.name} {"\n"} {.items[*].status.capacity.cpu}'
+
+kubectl get nodes -o=jsonpath='{range .items[*]} {.metadata.name} {"\t"} {.status.capacity.cpu}{"\n"}{end}'
+
+kubectl get nodes --sort-by= .metadata.name
+
+kubectl get nodes --sort-by= .status.capacity.cpu
+
+kubectl get nodes -o jsonpath='{.items[*].status.nodeInfo.osImage}'
+
+kubectl config view --kubeconfig=/root/my-kube-config --> different path of kube-config
+
+kubectl get pv --sort-by=.spec.capacity.storage -o=custom-columns=NAME:.metadata.name,CAPACITY:.spec.capacity.storage > /opt/outputs/pv-and-capacity-sorted.txtpath='{.users[*].name}'
+
+kubectl get pv --sort-by=.spec.capacity.storage > /opt/outputs/storage-capacity-sorted.txt
+
+kubectl get pv --sort-by=.spec.capacity.storage -o=custom-columns=NAME:.metadata.name,CAPACITY:.spec.capacity.storage > /opt/outputs/pv-and-capacity-sorted.txt
+
+kubectl config view --kubeconfig=my-kube-config -o jsonpath="{.contexts[?(@.context.user=='aws-user')].name}" > /opt/outputs/aws-context-name
