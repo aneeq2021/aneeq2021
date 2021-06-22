@@ -1,0 +1,6 @@
+ansible-doc -t connection -l
+ansible -m copy -a src=.gitconfig_master dest=/tmp localhost
+ansible -m copy -a src=.gitconfig_master dest=/tmp --check localhost
+ansible -m yum -a name=httpd state=latest localhost
+ansible -m setup localhost
+ansible-playbook playbook.yaml -vv

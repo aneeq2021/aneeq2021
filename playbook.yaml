@@ -1,0 +1,6 @@
+---
+- name: copy
+#  gather_facts: false
+  hosts: localhost
+  tasks:
+  - copy: src=".gitconfig_master" dest="/tmp"
